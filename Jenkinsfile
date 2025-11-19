@@ -3,7 +3,7 @@ pipeline {
  stages {
    stage('Clone Repository') {
             steps {
-                git url: 'https://github.com/aravind30122003/devops-restartg', branch: 'main' 
+                git url: 'https://github.com/aravind30122003/devops-restart', branch: 'main' 
      }
    }
    stage('listing the directory'){
