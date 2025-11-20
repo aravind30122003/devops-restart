@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKERHUB_USER = aravind310730 // store only username in Jenkins
-        dockerhub-cred = credentials('docker-password') // store password/token here
+        dockerhub_cred = credentials('docker-password') // store password/token here
         IMAGE_NAME = "restart/devops-restart"   // change to your repo name
         TAG = "latest"
     }
