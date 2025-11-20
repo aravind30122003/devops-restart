@@ -12,7 +12,7 @@ pipeline {
 
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/aravind30122003/devops-restart/repo.git'
+                git branch: 'main', url: 'https://github.com/aravind30122003/devops-restart.git'
            }
         }
 
