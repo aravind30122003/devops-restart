@@ -21,6 +21,13 @@ pipeline {
                 sh "docker build -t ${IMAGE_NAME}:${TAG} ."
             }
         }
+        stage('trivy scan') {
+            steps {
+               script{
+                sh "trivy image --exit-code 0 --severity CRITICAL<HIGH ${IMAGE_NAME}:${TAG} ."
+            }
+          }
+       }
 
         stage('Login to Docker Hub') {
             steps {
