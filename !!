@@ -1,0 +1,51 @@
+pipeline {
+ agent any
+ environment {
+    docker_username = credentials('docker-username')
+    docker_pass = credentials('docker-password')
+    image_name = restart/devops-restart
+    tag = "latest"
+}
+ stages {
+   stage('Clone Repository') {
+            steps {
+                git url: 'https://github.com/aravind30122003/devops-restart', branch: 'main' 
+     }
+   }
+   stage('build docker image'){
+           steps{
+              sh '
+                   docker build -t {$image_name}:{$tag} . '
+    } 
+  } 
+   stage('login to dockerhub'){
+           steps{
+              sh '
+                   echo "${docker_password}" | docker login -u "{$docker_username}" --password-stdin '
+  }
+}
+   stage('build docker image'){
+           steps{
+              sh '
+                   docker build -t {$image_name}:{$tag} . '
+    }
+  }   stage('push to docker hub'){
+           steps{
+              sh '
+                   docker push {$image_name}:{$tag} . '
+    }
+  }
+
+   post {
+      success {
+         echo "pipeline succeeded"
+    }
+      failure {
+         echo "pipeline failed"
+    }
+       always {
+         sh "docker logout"
+    }
+  }
+}
+

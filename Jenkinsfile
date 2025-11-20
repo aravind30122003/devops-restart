@@ -1,24 +1,51 @@
 pipeline {
- agent any
- stages {
-   stage('Clone Repository') {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = aravind310730 // store only username in Jenkins
+        dockerhub-cred = credentials('docker-password') // store password/token here
+        IMAGE_NAME = "restart/devops-restart"   // change to your repo name
+        TAG = "latest"
+    }
+
+    stages {
+
+        stage('Clone Repository') {
             steps {
-                git url: 'https://github.com/aravind30122003/devops-restart', branch: 'main' 
-     }
-   }
-   stage('listing the directory'){
-           steps{
-              sh 'ls -h'
-    } 
-  } 
-}
-   post {
-      success {
-         echo "pipeline succeeded"
+                git branch: 'main', url: 'https://github.com/aravind30122003/devops-restart/repo.git'
+           }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh """
+                docker build -t ${IMAGE_NAME}:${TAG} .
+                """
+            }
+        }
+
+        stage('Login to Docker Hub') {
+            steps {
+                sh """
+                echo "${DOCKERHUB_PASS}" | docker login -u "${DOCKERHUB_USER}" --password-stdin
+                """
+            }
+        }
+
+        stage('Push to Docker Hub') {
+            steps {
+                sh """
+                docker push ${IMAGE_NAME}:${TAG}
+                """
+            }
+        }
+
     }
-      failure {
-         echo "pipeline failed"
+
+    post {
+        always {
+            sh "docker logout"
+        }
     }
-  }
 }
 
