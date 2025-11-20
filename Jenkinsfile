@@ -4,7 +4,7 @@ pipeline {
     environment {
         DOCKERHUB_USER = "aravind310730" // store only username in Jenkins
         dockerhub_cred = credentials('dockerhub_cred') // store password/token here
-        IMAGE_NAME = "restart/devops-restart"   // change to your repo name
+        IMAGE_NAME = "aravind310730/devops-restart"   // change to your repo name
         TAG = "latest"
     }
 
@@ -43,9 +43,12 @@ pipeline {
     }
 
     post {
-        always {
-            sh "docker logout"
+    always {
+        node {
+            sh "docker logout || true"
         }
     }
+}
+
 }
 
