@@ -1,3 +1,5 @@
-FROM alphine
-CMD [ "echo", "devops restart" ]
+FROM alpine
+RUN echo "Hello Jenkins"
+CMD ["sleep","3600"]
+
 
