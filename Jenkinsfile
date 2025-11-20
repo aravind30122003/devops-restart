@@ -10,7 +10,8 @@ pipeline {
            steps{
               sh 'ls -h'
     } 
-   }
+  } 
+}
    post {
       success {
          echo "pipeline succeeded"
