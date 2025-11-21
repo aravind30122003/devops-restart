@@ -4,8 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "aravind310730/devops-restart"
         TAG = "latest"
-        DOCKERHUB_CRED = credentials('dockerhub_cred')  // Docker Hub credentials in Jenkins
-        KUBE_CONFIG = "/root/.kube/config"               // Kind kubeconfig path
+        DOCKERHUB_CRED = credentials('dockerhub_cred') // Docker Hub credentials
         DEPLOYMENT_NAME = "restart-app"
         CONTAINER_NAME = "restart"
         NAMESPACE = "default"
@@ -53,11 +52,14 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                sh """
-                kubectl --kubeconfig=${KUBE_CONFIG} set image deployment/${DEPLOYMENT_NAME} \
-                ${CONTAINER_NAME}=${IMAGE_NAME}:${TAG} -n ${NAMESPACE}
-                kubectl --kubeconfig=${KUBE_CONFIG} rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
-                """
+                // Use Jenkins secret file for kubeconfig
+                withCredentials([file(credentialsId: 'kubeconfig_id', variable: 'KUBECONFIG')]) {
+                    sh """
+                    kubectl --kubeconfig=$KUBECONFIG set image deployment/${DEPLOYMENT_NAME} \
+                    ${CONTAINER_NAME}=${IMAGE_NAME}:${TAG} -n ${NAMESPACE}
+                    kubectl --kubeconfig=$KUBECONFIG rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
+                    """
+                }
             }
         }
     }
@@ -74,6 +76,7 @@ pipeline {
         }
     }
 }
+
 
 
 
