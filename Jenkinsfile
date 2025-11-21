@@ -4,7 +4,8 @@ pipeline {
     environment {
         IMAGE_NAME = "aravind310730/devops-restart"
         TAG = "latest"
-        DOCKERHUB_CRED = credentials('dockerhub_cred') // Docker Hub credentials
+        DOCKERHUB_CRED = credentials('dockerhub_cred') // Docker Hub credentials in Jenkins
+        KUBE_CONFIG = "/var/jenkins_home/.kube/config" // Path to kubeconfig Jenkins can read
         DEPLOYMENT_NAME = "restart-app"
         CONTAINER_NAME = "restart"
         NAMESPACE = "default"
@@ -26,6 +27,7 @@ pipeline {
 
         stage('Trivy Scan') {
             steps {
+                // Continue even if vulnerabilities found
                 sh "trivy image ${IMAGE_NAME}:${TAG} || true"
             }
         }
@@ -52,14 +54,11 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                // Use Jenkins secret file for kubeconfig
-                withCredentials([file(credentialsId: 'kubeconfig_id', variable: 'KUBECONFIG')]) {
-                    sh """
-                    kubectl --kubeconfig=$KUBECONFIG set image deployment/${DEPLOYMENT_NAME} \
-                    ${CONTAINER_NAME}=${IMAGE_NAME}:${TAG} -n ${NAMESPACE}
-                    kubectl --kubeconfig=$KUBECONFIG rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
-                    """
-                }
+                sh """
+                kubectl --kubeconfig=${KUBE_CONFIG} set image deployment/${DEPLOYMENT_NAME} \
+                ${CONTAINER_NAME}=${IMAGE_NAME}:${TAG} -n ${NAMESPACE}
+                kubectl --kubeconfig=${KUBE_CONFIG} rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
+                """
             }
         }
     }
@@ -76,6 +75,7 @@ pipeline {
         }
     }
 }
+
 
 
 
