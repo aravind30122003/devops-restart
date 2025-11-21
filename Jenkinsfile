@@ -2,14 +2,15 @@ pipeline {
     agent any
 
     environment {
-
-        dockerhub_cred = credentials('dockerhub_cred')
         IMAGE_NAME = "aravind310730/devops-restart"
         TAG = "latest"
+        DOCKERHUB_CRED = credentials('dockerhub_cred')
+        KUBE_CONFIG = '/home/jenkins/.kube/config' // adjust if different
+        DEPLOYMENT_NAME = 'restart-app'
+        NAMESPACE = 'default'
     }
 
     stages {
-
         stage('Clone Repository') {
             steps {
                 git branch: 'main', url: 'https://github.com/aravind30122003/devops-restart.git'
@@ -21,16 +22,17 @@ pipeline {
                 sh "docker build -t ${IMAGE_NAME}:${TAG} ."
             }
         }
-          stage('Trivy Scan') {
+
+        stage('Trivy Scan') {
             steps {
-                sh "trivy image ${IMAGE_NAME}:latest || true"
+                sh "trivy image ${IMAGE_NAME}:${TAG} || true"
             }
         }
 
         stage('Login to Docker Hub') {
             steps {
                 sh """
-                echo "${dockerhub_cred_PSW}" | docker login -u "${dockerhub_cred_USR}" --password-stdin
+                echo "${DOCKERHUB_CRED_PSW}" | docker login -u "${DOCKERHUB_CRED_USR}" --password-stdin
                 """
             }
         }
@@ -40,12 +42,37 @@ pipeline {
                 sh "docker push ${IMAGE_NAME}:${TAG}"
             }
         }
+
+        stage('Load Image into Kind') {
+            steps {
+                // Only needed if using Kind cluster
+                sh "kind load docker-image ${IMAGE_NAME}:${TAG} --name devops"
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                // Update deployment image
+                sh """
+                kubectl --kubeconfig=${KUBE_CONFIG} set image deployment/${DEPLOYMENT_NAME} \
+                ${DEPLOYMENT_NAME}=${IMAGE_NAME}:${TAG} -n ${NAMESPACE}
+                kubectl --kubeconfig=${KUBE_CONFIG} rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
+                """
+            }
+        }
     }
 
     post {
         always {
             sh "docker logout || true"
         }
+        success {
+            echo "Pipeline completed and deployment updated successfully!"
+        }
+        failure {
+            echo "Pipeline failed! Check the logs."
+        }
     }
 }
+
 
