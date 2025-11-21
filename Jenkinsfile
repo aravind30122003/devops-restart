@@ -61,7 +61,12 @@ pipeline {
                 """
             }
         }
-    }
+    } 
+        stage('listing pods') {
+            steps {
+                sh " kubectl get pods "
+            }
+         }
 
     post {
         always {
