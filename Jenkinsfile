@@ -1,19 +1,18 @@
-pipeline {
+wpipeline {
     agent any
 
     environment {
         IMAGE_NAME = "aravind310730/devops-restart"
-        TAG = "latest"
-        DOCKERHUB_CRED = credentials('dockerhub_cred') // Docker Hub credentials in Jenkins
-        KUBE_CONFIG = "/var/jenkins_home/.kube/config" // Path to kubeconfig Jenkins can read
-        DEPLOYMENT_NAME = "restart-app"
-        CONTAINER_NAME = "restart"
+        TAG = "${env.BUILD_NUMBER}"           // version each build
+        DOCKERHUB_CRED = credentials('dockerhub_cred')
+        KUBE_CONFIG = "/var/jenkins_home/.kube/config"
+        RELEASE = "restart-app"
         NAMESPACE = "default"
-        KIND_CLUSTER_NAME = "devops"
     }
 
     stages {
-        stage('Clone Repository') {
+
+        stage('Clone Repo') {
             steps {
                 git branch: 'main', url: 'https://github.com/aravind30122003/devops-restart.git'
             }
@@ -25,10 +24,11 @@ pipeline {
             }
         }
 
-        stage('Trivy Scan') {
+        stage('Security Scan (Trivy)') {
             steps {
-                // Continue even if vulnerabilities found
-                sh "trivy image ${IMAGE_NAME}:${TAG} || true"
+                sh """
+                trivy image --severity HIGH,CRITICAL --exit-code 1 ${IMAGE_NAME}:${TAG} || true
+                """
             }
         }
 
@@ -40,43 +40,44 @@ pipeline {
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Push Image') {
             steps {
                 sh "docker push ${IMAGE_NAME}:${TAG}"
             }
         }
 
-        stage('Load Image into Kind') {
-            steps {
-                sh "kind load docker-image ${IMAGE_NAME}:${TAG} --name ${KIND_CLUSTER_NAME}"
-            }
-        }
-
-        stage('Deploy to Kubernetes') {
+        stage('Deploy with Helm') {
             steps {
                 sh """
-                kubectl --kubeconfig=${KUBE_CONFIG} set image deployment/${DEPLOYMENT_NAME} \
-                ${CONTAINER_NAME}=${IMAGE_NAME}:${TAG} -n ${NAMESPACE}
-                kubectl --kubeconfig=${KUBE_CONFIG} rollout status deployment/${DEPLOYMENT_NAME} -n ${NAMESPACE}
+                helm upgrade --install ${RELEASE} ./helm/ \
+                --namespace ${NAMESPACE} --create-namespace \
+                --set image.repository=${IMAGE_NAME} \
+                --set image.tag=${TAG}
                 """
             }
         }
-    } 
+
+        stage('Verify Rollout') {
+            steps {
+                sh """
+                kubectl --kubeconfig=${KUBE_CONFIG} rollout status deployment/${RELEASE} -n ${NAMESPACE}
+                """
+            }
+        }
+    }
 
     post {
+        success {
+            echo "🚀 Deployment successful: version ${TAG}"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs."
+        }
         always {
             sh "docker logout || true"
         }
-        success {
-            echo "Pipeline completed and deployment updated successfully!"
-        }
-        failure {
-            echo "Pipeline failed! Check the logs."
-        }
     }
 }
-
-
 
 
 
